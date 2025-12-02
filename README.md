@@ -11,7 +11,7 @@ Forked from [kernel-build-containers](https://github.com/a13xp0p0v/kernel-build-
 | Image tag | `kernel-build-container:<compiler>` | `fuzzer-build-container:<fuzzer>-<compiler>` |
 | Compiler bundling | GCC + Clang bundled per image | Separate image per compiler |
 | Fuzzer name | N/A | Required for build/remove |
-| Additional deps | N/A | Optional `--deps` flag |
+| Additional deps | N/A | `vim`, `python3-pip`, Optional `--deps` flag |
 | Mount points | `/src`, `/out` | `/fuzzer_src` (workdir), `/src` (optional), `/out` |
 | Default workdir | `/src` | `/fuzzer_src` |
 

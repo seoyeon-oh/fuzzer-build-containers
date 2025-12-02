@@ -10,7 +10,7 @@ RUN set -ex; \
     apt-get update; \
     apt-get install -y -q apt-utils dialog; \
     apt-get install -y -q sudo aptitude flex bison cpio libncurses5-dev make git exuberant-ctags sparse bc libssl-dev libelf-dev bsdmainutils dwarves xz-utils zstd gawk rsync vim; \
-    apt-get install -y -q python3 python3-venv; \
+    apt-get install -y -q python3 python3-venv python3-pip; \
     apt-get install -y -q python-is-python3 || apt-get install -y -q python; \
     if [ -n "$ADDITIONAL_DEPS" ]; then \
       apt-get install -y -q $ADDITIONAL_DEPS; \
