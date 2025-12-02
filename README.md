@@ -1,4 +1,92 @@
-# kernel-build-containers
+# fuzzer-build-containers
+
+Container images for building Linux kernel fuzzers with many different compilers.
+
+Forked from [kernel-build-containers](https://github.com/a13xp0p0v/kernel-build-containers) by a13xp0p0v.
+
+## Modifications from Original
+
+| Feature | kernel-build-containers | fuzzer-build-containers |
+|---------|------------------------|-------------------------|
+| Image tag | `kernel-build-container:<compiler>` | `fuzzer-build-container:<fuzzer>-<compiler>` |
+| Compiler bundling | GCC + Clang bundled per image | Separate image per compiler |
+| Fuzzer name | N/A | Required for build/remove |
+| Additional deps | N/A | Optional `--deps` flag |
+| Mount points | `/src`, `/out` | `/fuzzer_src` (workdir), `/src` (optional), `/out` |
+| Default workdir | `/src` | `/fuzzer_src` |
+
+## Usage
+
+### Managing Images (`manage_images.py`)
+
+```bash
+# Build image for a specific compiler
+./manage_images.py -b gcc-12 -f myfuzzer
+
+# Build with additional dependencies (comma-separated)
+./manage_images.py -b gcc-12 -f myfuzzer --deps "libusb-1.0-0-dev,libudev-dev"
+
+# List all fuzzer-build-container images
+./manage_images.py -l
+
+# Remove image
+./manage_images.py -r gcc-12 -f myfuzzer
+```
+
+**Options:**
+- `-b <compiler>` - Build image (requires `-f`)
+- `-r <compiler>` - Remove image (requires `-f`)
+- `-l` - List all images
+- `-f <name>` - Fuzzer name (required for build/remove)
+- `--deps <packages>` - Additional apt packages (comma-separated)
+- `-d` / `-p` - Use Docker (default) / Podman
+- `-q` - Quiet mode
+
+### Running Containers (`start_container.sh`)
+
+```bash
+# Basic usage (4 required args)
+./start_container.sh <fuzzer_name> <compiler> <fuzzer_src_dir> <out_dir>
+
+# With kernel source directory
+./start_container.sh myfuzzer gcc-12 /path/to/fuzzer /path/to/out -k /path/to/kernel
+```
+
+**Arguments:**
+- `fuzzer_name` - Fuzzer name (used in image tag)
+- `compiler` - Compiler (e.g., `gcc-12`, `clang-15`)
+- `fuzzer_src_dir` - Fuzzer source (mounted at `/fuzzer_src`, default workdir)
+- `out_dir` - Output directory (mounted at `/out`)
+
+**Options:**
+- `-k <path>` - Kernel source directory (mounted at `/src`)
+- `-d` / `-p` - Use Docker (default) / Podman
+- `-n` - Non-interactive mode
+- `-e <VAR>` - Add environment variable
+- `-v` - Verbose output
+
+### Container Mount Points
+
+| Host Path | Container Path | Required |
+|-----------|---------------|----------|
+| `fuzzer_src_dir` | `/fuzzer_src` (workdir) | Yes |
+| `out_dir` | `/out` | Yes |
+| `kernel_src_dir` | `/src` | No |
+
+## Unmaintained Features
+
+These remain for legacy compatibility but are not maintained:
+- `build_linux.py`
+- `finish_container.sh`
+- `test_image_mgmt.sh`
+
+## License
+
+GPL-3.0 (inherited from `kernel-build-containers`)
+
+---
+
+# Original README: kernel-build-containers
 
 [![GitHub tag (latest by date)](https://img.shields.io/github/v/tag/a13xp0p0v/kernel-build-containers?label=release)](https://github.com/a13xp0p0v/kernel-build-containers/tags)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)

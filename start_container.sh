@@ -3,31 +3,42 @@
 set -eu
 
 print_help() {
-	echo "usage: $0 compiler src_dir out_dir [-h] [-d | -p] [-n] [-e VAR] [-v] [-- cmd with args]"
+	echo "usage: $0 fuzzer_name compiler fuzzer_src_dir out_dir [-h] [-d | -p] [-n] [-k kernel_src_dir] [-e VAR] [-v] [-- cmd with args]"
+	echo ""
+	echo "Required arguments:"
+	echo "  fuzzer_name     name of the fuzzer (used in image tag)"
+	echo "  compiler        compiler to use (e.g., gcc-12, clang-15)"
+	echo "  fuzzer_src_dir  path to fuzzer source directory (mounted at /fuzzer_src, default workdir)"
+	echo "  out_dir         path to output directory (mounted at /out)"
+	echo ""
+	echo "Optional arguments:"
 	echo "  -h    print this help"
 	echo "  -d    force to use the Docker container engine (default)"
 	echo "  -p    force to use the Podman container engine instead of default Docker"
 	echo "  -n    launch container in non-interactive mode"
+	echo "  -k    path to kernel source directory (mounted at /src)"
 	echo "  -e    add environment variable in the container (may be used multiple times)"
 	echo "  -v    enable debug output"
 	echo ""
 	echo "  If cmd is empty, we will start an interactive bash in the container."
 }
 
-if [ $# -lt 3 ]; then
+if [ $# -lt 4 ]; then
 	print_help
 	exit 1
 fi
 
-COMPILER="$1"
-SRC="$2"
-OUT="$3"
-shift 3
+FUZZER_NAME="$1"
+COMPILER="$2"
+FUZZER_SRC="$3"
+OUT="$4"
+shift 4
 
 # defaults
 CIDFILE=""
 ENV=""
 INTERACTIVE="-it"
+KERNEL_SRC=""
 RUNTIME=""
 RUNTIME_SPECIFIC_ARGS=""
 SUDO_CMD=""
@@ -66,6 +77,10 @@ while [[ $# -gt 0 ]]; do
 		echo "Gonna run the container in NON-interactive mode"
 		shift
 		;;
+	-k | --kernel-src)
+		KERNEL_SRC="$2"
+		shift 2
+		;;
 	-e | --env)
 		# `set -eu` will prevent out-of-bounds access
 		ENV="$ENV -e $2"
@@ -101,7 +116,8 @@ if echo "$RUNTIME_TEST_OUTPUT" | grep -qi "permission denied"; then
 	SUDO_CMD="sudo"
 fi
 
-echo "Starting \"kernel-build-container:$COMPILER\""
+IMAGE_TAG="fuzzer-build-container:${FUZZER_NAME}-${COMPILER}"
+echo "Starting \"$IMAGE_TAG\""
 
 if [ ! -z "$ENV" ]; then
 	echo "Container environment arguments: $ENV"
@@ -111,7 +127,10 @@ if [ ! -z "$INTERACTIVE" ]; then
 	echo "Gonna run the container in interactive mode"
 fi
 
-echo "Mount source code directory \"$SRC\" at \"/src\""
+echo "Mount fuzzer source directory \"$FUZZER_SRC\" at \"/fuzzer_src\" (workdir)"
+if [ -n "$KERNEL_SRC" ]; then
+	echo "Mount kernel source directory \"$KERNEL_SRC\" at \"/src\""
+fi
 echo "Mount build output directory \"$OUT\" at \"/out\""
 
 if [ $# -gt 0 ]; then
@@ -120,8 +139,13 @@ else
 	echo -e "Gonna run bash\n"
 fi
 
+# Build volume mount arguments
+VOLUME_ARGS="-v $FUZZER_SRC:/fuzzer_src:Z -v $OUT:/out:Z"
+if [ -n "$KERNEL_SRC" ]; then
+	VOLUME_ARGS="$VOLUME_ARGS -v $KERNEL_SRC:/src:Z"
+fi
+
 # Z for setting SELinux label
 exec $SUDO_CMD $RUNTIME run $ENV $INTERACTIVE $CIDFILE $RUNTIME_SPECIFIC_ARGS --pull=never --rm \
-	-v $SRC:/src:Z \
-	-v $OUT:/out:Z \
-	kernel-build-container:$COMPILER "$@"
+	$VOLUME_ARGS \
+	$IMAGE_TAG "$@"

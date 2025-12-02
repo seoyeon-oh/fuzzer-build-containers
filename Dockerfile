@@ -3,13 +3,18 @@ FROM ubuntu:${UBUNTU_VERSION} AS base
 
 ARG GCC_VERSION
 ARG CLANG_VERSION
+ARG ADDITIONAL_DEPS
+
 RUN set -ex; \
     echo 'debconf debconf/frontend select Noninteractive' | debconf-set-selections; \
     apt-get update; \
     apt-get install -y -q apt-utils dialog; \
-    apt-get install -y -q sudo aptitude flex bison cpio libncurses5-dev make git exuberant-ctags sparse bc libssl-dev libelf-dev bsdmainutils dwarves xz-utils zstd gawk rsync; \
+    apt-get install -y -q sudo aptitude flex bison cpio libncurses5-dev make git exuberant-ctags sparse bc libssl-dev libelf-dev bsdmainutils dwarves xz-utils zstd gawk rsync vim; \
     apt-get install -y -q python3 python3-venv; \
     apt-get install -y -q python-is-python3 || apt-get install -y -q python; \
+    if [ -n "$ADDITIONAL_DEPS" ]; then \
+      apt-get install -y -q $ADDITIONAL_DEPS; \
+    fi; \
     if [ "$GCC_VERSION" ]; then \
       apt-get install -y -q gcc-${GCC_VERSION} g++-${GCC_VERSION} gcc-${GCC_VERSION}-plugin-dev \
         gcc-${GCC_VERSION}-aarch64-linux-gnu g++-${GCC_VERSION}-aarch64-linux-gnu \
@@ -65,19 +70,23 @@ RUN set -x; \
     useradd -u $UID -g $GID -G sudo -ms /bin/bash ${UNAME}; \
     mkdir /src; \
     chown -R ${UNAME}:${GNAME} /src; \
+    mkdir /fuzzer_src; \
+    chown -R ${UNAME}:${GNAME} /fuzzer_src; \
     mkdir /out; \
     chown -R ${UNAME}:${GNAME} /out; \
     echo "${UNAME} ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 
 USER ${UNAME}:${GNAME}
-WORKDIR /src
+WORKDIR /fuzzer_src
 
 RUN set -ex; \
     id | grep "uid=${UID}(${UNAME}) gid=${GID}(${GNAME})"; \
     sudo ls; \
-    pwd | grep "^/src"; \
+    pwd | grep "^/fuzzer_src"; \
     touch /src/test; \
     rm /src/test; \
+    touch /fuzzer_src/test; \
+    rm /fuzzer_src/test; \
     touch /out/test; \
     rm /out/test
 
